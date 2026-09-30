@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Segmentasi Pelanggan Kedai Kopi</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plotly.js CDN untuk Visualisasi 3D -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+        header {
+            background: #4a2c2a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        h2 {
+            color: #4a2c2a;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            font-size: 18px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #6f4e37;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #4a2c2a;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #eef7ee;
+            border-left: 5px solid #2e7d32;
+            border-radius: 4px;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #6f4e37;
+            color: white;
+        }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .hemat { background-color: #757575; }
+        .nongkrong { background-color: #0288d1; }
+        .sultan { background-color: #d32f2f; }
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        #chart3d {
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Dashboard Analytics & Simulator Segmentasi Pelanggan</h1>
+        <p>Analisis Kluster Pola Pembelian Kedai Kopi (50 Data Pelanggan)</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- VISUALISASI 3D SCATTER PLOT -->
+        <div class="card full-width">
+            <h2>1. Visualisasi 3D Clustering Pelanggan</h2>
+            <div id="chart3d"></div>
+        </div>
+
+        <!-- DIAGRAM DONUT PROPORSI SEGMEN -->
+        <div class="card">
+            <h2>2. Proporsi Segmen Pelanggan</h2>
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- DIAGRAM BATANG -->
+        <div class="card">
+            <h2>3. Rata-Rata Total Belanja per Segmen (Rp)</h2>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- GRAFIK GARIS -->
+        <div class="card">
+            <h2>4. Tren Frekuensi Kunjungan Hari per Bulan</h2>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- SIMULATOR SEGMENTASI -->
+        <div class="card">
+            <h2>5. Simulator Prediksi Segmen Baru</h2>
+            <div class="form-group">
+                <label for="belanja">Total Belanja (Rp):</label>
+                <input type="number" id="belanja" placeholder="Contoh: 250000">
+            </div>
+            <div class="form-group">
+                <label for="cangkir">Jumlah Cangkir / Item:</label>
+                <input type="number" id="cangkir" placeholder="Contoh: 5">
+            </div>
+            <div class="form-group">
+                <label for="hari">Hari Datang dalam Sebulan:</label>
+                <input type="number" id="hari" placeholder="Contoh: 4">
+            </div>
+            <button onclick="predictCluster()">Analisis Segmen Pelanggan</button>
+
+            <div id="resultBox" class="result-box">
+                <h3 id="resTitle">Hasil Segmen</h3>
+                <p style="margin-top: 5px;"><strong>Rekomendasi Promo:</strong> <span id="resPromo"></span></p>
+            </div>
+        </div>
+
+        <!-- TABEL DATASET 50 PELANGGAN -->
+        <div class="card full-width">
+            <h2>Dataset & Segmen 50 Pelanggan Kedai Kopi</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Total Belanja (Rp)</th>
+                            <th>Cangkir / Item</th>
+                            <th>Hari Datang / Bulan</th>
+                            <th>Segmen Hasil Clustering</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data otomatis diisi JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const customers = [];
+        const hematData = { x: [], y: [], z: [], name: 'Pelanggan Hemat' };
+        const nongkrongData = { x: [], y: [], z: [], name: 'Anak Nongkrong' };
+        const sultanData = { x: [], y: [], z: [], name: 'Sultan VIP' };
+
+        // 20 Pelanggan Hemat
+        for (let i = 1; i <= 20; i++) {
+            const b = Math.floor(Math.random() * 175000) + 75000;
+            const c = Math.floor(Math.random() * 5) + 1;
+            const h = Math.floor(Math.random() * 4) + 1;
+            customers.push({ id: `CUST_${String(i).padStart(3, '0')}`, belanja: b, cangkir: c, hari: h, segmen: "🥉 Pelanggan Hemat", class: "hemat" });
+            hematData.x.push(b); hematData.y.push(c); hematData.z.push(h);
+        }
+        // 20 Anak Nongkrong
+        for (let i = 21; i <= 40; i++) {
+            const b = Math.floor(Math.random() * 550000) + 300000;
+            const c = Math.floor(Math.random() * 15) + 6;
+            const h = Math.floor(Math.random() * 8) + 5;
+            customers.push({ id: `CUST_${String(i).padStart(3, '0')}`, belanja: b, cangkir: c, hari: h, segmen: "🍰 Anak Nongkrong", class: "nongkrong" });
+            nongkrongData.x.push(b); nongkrongData.y.push(c); nongkrongData.z.push(h);
+        }
+        // 10 Sultan VIP / Anak Kantor
+        for (let i = 41; i <= 50; i++) {
+            const b = Math.floor(Math.random() * 1550000) + 900000;
+            const c = Math.floor(Math.random() * 30) + 21;
+            const h = Math.floor(Math.random() * 13) + 13;
+            customers.push({ id: `CUST_${String(i).padStart(3, '0')}`, belanja: b, cangkir: c, hari: h, segmen: "👑 Sultan VIP / Anak Kantor", class: "sultan" });
+            sultanData.x.push(b); sultanData.y.push(c); sultanData.z.push(h);
+        }
+
+        // Tampilkan Tabel
+        const tableBody = document.getElementById('tableBody');
+        customers.forEach(c => {
+            const row = `<tr>
+                <td>${c.id}</td>
+                <td>Rp ${c.belanja.toLocaleString('id-ID')}</td>
+                <td>${c.cangkir}</td>
+                <td>${c.hari} Hari</td>
+                <td><span class="badge ${c.class}">${c.segmen}</span></td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+
+        // Plotly 3D
+        Plotly.newPlot('chart3d', [
+            { x: hematData.x, y: hematData.y, z: hematData.z, mode: 'markers', marker: { size: 6, color: '#757575' }, type: 'scatter3d', name: 'Pelanggan Hemat' },
+            { x: nongkrongData.x, y: nongkrongData.y, z: nongkrongData.z, mode: 'markers', marker: { size: 6, color: '#0288d1' }, type: 'scatter3d', name: 'Anak Nongkrong' },
+            { x: sultanData.x, y: sultanData.y, z: sultanData.z, mode: 'markers', marker: { size: 8, color: '#d32f2f' }, type: 'scatter3d', name: 'Sultan VIP' }
+        ], { margin: { l: 0, r: 0, b: 0, t: 0 }, scene: { xaxis: { title: 'Belanja (Rp)' }, yaxis: { title: 'Cangkir' }, zaxis: { title: 'Hari Datang' } } });
+
+        // Donut Chart
+        new Chart(document.getElementById('pieChart'), {
+            type: 'doughnut',
+            data: { labels: ['Pelanggan Hemat', 'Anak Nongkrong', 'Sultan VIP'], datasets: [{ data: [20, 20, 10], backgroundColor: ['#757575', '#0288d1', '#d32f2f'] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // Bar Chart
+        new Chart(document.getElementById('barChart'), {
+            type: 'bar',
+            data: { labels: ['Pelanggan Hemat', 'Anak Nongkrong', 'Sultan VIP'], datasets: [{ data: [125000, 520000, 1650000], backgroundColor: ['#757575', '#0288d1', '#d32f2f'] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // Line Chart
+        new Chart(document.getElementById('lineChart'), {
+            type: 'line',
+            data: {
+                labels: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'],
+                datasets: [
+                    { label: 'Pelanggan Hemat', data: [2, 1, 3, 2], borderColor: '#757575', fill: false },
+                    { label: 'Anak Nongkrong', data: [5, 8, 6, 9], borderColor: '#0288d1', fill: false },
+                    { label: 'Sultan VIP', data: [15, 18, 20, 22], borderColor: '#d32f2f', fill: false }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // Simulator Prediksi
+        function predictCluster() {
+            const belanja = parseFloat(document.getElementById('belanja').value);
+            const cangkir = parseInt(document.getElementById('cangkir').value);
+            const hari = parseInt(document.getElementById('hari').value);
+
+            if (isNaN(belanja) || isNaN(cangkir) || isNaN(hari)) {
+                alert("Harap isi semua kolom data terlebih dahulu!");
+                return;
+            }
+
+            let segmen = "", promo = "";
+            if (belanja >= 900000 || cangkir >= 21) {
+                segmen = "👑 Sultan VIP / Anak Kantor";
+                promo = "Berikan Kartu Akses VIP, Prioritas Bebas Antre, dan Diskon Paket Traktir Kantor 15%.";
+            } else if (belanja >= 300000 || cangkir >= 6) {
+                segmen = "🍰 Anak Nongkrong";
+                promo = "Tawarkan Promo Bundling Paket 'Kopi + Pastry' Hemat untuk Dinikmati Bersama.";
+            } else {
+                segmen = "🥉 Pelanggan Hemat";
+                promo = "Berikan Kupon Voucher 'Up-size Gratis' atau Diskon Khusus di Jam-jam Sepi (Happy Hour).";
+            }
+
+            document.getElementById('resTitle').innerText = "Hasil Segmen: " + segmen;
+            document.getElementById('resPromo').innerText = promo;
+            document.getElementById('resultBox').style.display = "block";
+        }
+    </script>
+</body>
+</html>
